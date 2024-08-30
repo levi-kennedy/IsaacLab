@@ -13,18 +13,18 @@ from omni.isaac.lab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Play a checkpoint of an RL agent from Stable-Baselines3.")
-parser.add_argument("--cpu", action="store_true", default=False, help="Use CPU pipeline.")
+# parser.add_argument("--cpu", action="store_true", default=False, help="Use CPU pipeline.")
 parser.add_argument(
     "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
 )
 parser.add_argument("--num_envs", type=int, default=1, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=None, help="Isaaclab-Panda_cabinet-v0")
 parser.add_argument(
-    "--checkpoint", 
-    type=str, 
-    default="/home/levi/projects/IsaacLab/source/vlmrew/franka_cabinet/logs/2024-07-01_17-31-30/model.zip",
+    "--checkpoint",
+    type=str,
+    default="/home/levi/projects/IsaacLab/source/vlmrew/franka_cabinet/logs/2024-07-01_17-31-30/model_4375000_steps.zip",
     help="Path to model checkpoint."
-    )
+)
 parser.add_argument(
     "--use_last_checkpoint",
     action="store_true",
@@ -59,7 +59,7 @@ from omni.isaac.lab_tasks.utils.parse_cfg import get_checkpoint_path, load_cfg_f
 from omni.isaac.lab_tasks.utils.wrappers.sb3 import Sb3VecEnvWrapper, process_sb3_cfg
 from franka_cabinet_env import FrankaCabinetEnv, FrankaCabinetEnvCfg
 import yaml
-
+from pickle import dump as dump_pickle
 
 
 def read_yaml_file(filepath):
@@ -68,6 +68,7 @@ def read_yaml_file(filepath):
             return yaml.safe_load(file)
         except yaml.YAMLError as exc:
             print(exc)
+
 
 def main():
     """Play with stable-baselines agent."""
@@ -85,7 +86,6 @@ def main():
     agent_cfg = read_yaml_file("/home/levi/projects/IsaacLab/source/vlmrew/franka_cabinet/sb3_ppo_cfg.yaml")
     if args_cli.max_iterations:
         agent_cfg["n_timesteps"] = args_cli.max_iterations * agent_cfg["n_steps"] * env_cfg.scene.num_envs
-
 
     # wrap around environment for stable baselines
     env = Sb3VecEnvWrapper(env)
@@ -105,7 +105,7 @@ def main():
     # directory for logging into
     log_root_path = os.path.join(
         "/home/levi/projects/IsaacLab/source/vlmrew/franka_cabinet/logs"
-    )    
+    )
     log_root_path = os.path.abspath(log_root_path)
 
     # check checkpoint is valid
@@ -125,6 +125,7 @@ def main():
     # reset environment
     obs = env.reset()
     step_cnt = 0
+    rewards = []
     # simulate environment
     while simulation_app.is_running():
         # run everything in inference mode
@@ -133,15 +134,20 @@ def main():
             # agent stepping
             actions, _ = agent.predict(obs, deterministic=True)
             # env stepping
-            obs, _, _, _ = env.step(actions)
+            obs, reward, done, info = env.step(actions)
+            rewards.append(reward[0])
             if step_cnt == 1100:
                 break
     # close the simulator
+    #     print(f"Total rewards: {sum(rewards)}")
     env.close()
+    # save the rewards array as a pickle file
+    with open(f"/home/levi/projects/IsaacLab/source/vlmrew/franka_cabinet/logs/rewards.pkl", "wb") as f:
+        dump_pickle(rewards, f)
 
 
 if __name__ == "__main__":
-    # run the main function    
-    main()    
+    # run the main function
+    main()
     # close sim app
     simulation_app.close()

@@ -32,6 +32,16 @@ import json
 from PIL import Image
 from io import BytesIO
 
+from pydantic import BaseModel
+
+
+class Score(BaseModel):
+    score: float
+
+
+class GPT_Rewards(BaseModel):
+    scores: list[Score]
+
 
 @configclass
 class FrankaCabinetEnvCfg(DirectRLEnvCfg):
@@ -164,14 +174,14 @@ class FrankaCabinetEnvCfg(DirectRLEnvCfg):
     # add camera
     table_camera = CameraCfg(
         prim_path="/World/envs/env_.*/table_camera",
-        update_period=0.0, 
+        update_period=0.0,
         height=512,
         width=512,
         data_types=["rgb"],
         spawn=sim_utils.PinholeCameraCfg(
             focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 1.0e5)
         ),
-        offset=CameraCfg.OffsetCfg(pos=(3.0, -1.8, 2.5), rot=(0.8, 0.4, 0.18, 0.5), convention="opengl"),
+        offset=CameraCfg.OffsetCfg(pos=(1.2, -0.7, 1.3), rot=(0.8, 0.4, 0.18, 0.5), convention="opengl"),
     )
 
     action_scale = 7.5
@@ -188,6 +198,7 @@ class FrankaCabinetEnvCfg(DirectRLEnvCfg):
 
     # vlm reward parameters
     reward_frame_step = 30
+
 
 class FrankaCabinetEnv(DirectRLEnv):
     # pre-physics step calls
@@ -298,7 +309,6 @@ class FrankaCabinetEnv(DirectRLEnv):
             api_key=api_key
         )
 
-
     def _setup_scene(self):
         self._robot = Articulation(self.cfg.robot)
         self._cabinet = Articulation(self.cfg.cabinet)
@@ -306,7 +316,7 @@ class FrankaCabinetEnv(DirectRLEnv):
         self.scene.articulations["robot"] = self._robot
         self.scene.articulations["cabinet"] = self._cabinet
         self.scene.sensors["table_camera"] = self._table_camera
-        
+
         self.cfg.terrain.num_envs = self.scene.cfg.num_envs
         self.cfg.terrain.env_spacing = self.scene.cfg.env_spacing
         self._terrain = self.cfg.terrain.class_type(self.cfg.terrain)
@@ -318,8 +328,6 @@ class FrankaCabinetEnv(DirectRLEnv):
         # add lights
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
         light_cfg.func("/World/Light", light_cfg)
-
-        
 
     # pre-physics step calls
 
@@ -339,35 +347,35 @@ class FrankaCabinetEnv(DirectRLEnv):
         return terminated, truncated
 
     def _get_rewards(self) -> torch.Tensor:
-        # # Refresh the intermediate values after the physics steps
-        # self._compute_intermediate_values()
-        # robot_left_finger_pos = self._robot.data.body_pos_w[:, self.left_finger_link_idx]
-        # robot_right_finger_pos = self._robot.data.body_pos_w[:, self.right_finger_link_idx]
+        # Refresh the intermediate values after the physics steps
+        self._compute_intermediate_values()
+        robot_left_finger_pos = self._robot.data.body_pos_w[:, self.left_finger_link_idx]
+        robot_right_finger_pos = self._robot.data.body_pos_w[:, self.right_finger_link_idx]
 
-        # return self._compute_rewards(
-        #     self.actions,
-        #     self._cabinet.data.joint_pos,
-        #     self.robot_grasp_pos,
-        #     self.drawer_grasp_pos,
-        #     self.robot_grasp_rot,
-        #     self.drawer_grasp_rot,
-        #     robot_left_finger_pos,
-        #     robot_right_finger_pos,
-        #     self.gripper_forward_axis,
-        #     self.drawer_inward_axis,
-        #     self.gripper_up_axis,
-        #     self.drawer_up_axis,
-        #     self.num_envs,
-        #     self.cfg.dist_reward_scale,
-        #     self.cfg.rot_reward_scale,
-        #     self.cfg.around_handle_reward_scale,
-        #     self.cfg.open_reward_scale,
-        #     self.cfg.finger_dist_reward_scale,
-        #     self.cfg.action_penalty_scale,
-        #     self._robot.data.joint_pos,
-        #     self.cfg.finger_close_reward_scale,
-        # )
-        return self._compute_vlm_rewards()
+        return self._compute_rewards(
+            self.actions,
+            self._cabinet.data.joint_pos,
+            self.robot_grasp_pos,
+            self.drawer_grasp_pos,
+            self.robot_grasp_rot,
+            self.drawer_grasp_rot,
+            robot_left_finger_pos,
+            robot_right_finger_pos,
+            self.gripper_forward_axis,
+            self.drawer_inward_axis,
+            self.gripper_up_axis,
+            self.drawer_up_axis,
+            self.num_envs,
+            self.cfg.dist_reward_scale,
+            self.cfg.rot_reward_scale,
+            self.cfg.around_handle_reward_scale,
+            self.cfg.open_reward_scale,
+            self.cfg.finger_dist_reward_scale,
+            self.cfg.action_penalty_scale,
+            self._robot.data.joint_pos,
+            self.cfg.finger_close_reward_scale,
+        )
+        # return self._compute_vlm_rewards()
 
     def _reset_idx(self, env_ids: torch.Tensor | None):
         super()._reset_idx(env_ids)
@@ -389,7 +397,6 @@ class FrankaCabinetEnv(DirectRLEnv):
 
         # Need to refresh the intermediate values so that _get_observations() can use the latest values
         self._compute_intermediate_values(env_ids)
-        
 
     def _get_observations(self) -> dict:
         dof_pos_scaled = (
@@ -409,23 +416,23 @@ class FrankaCabinetEnv(DirectRLEnv):
                 self._cabinet.data.joint_vel[:, 3].unsqueeze(-1),
             ),
             dim=-1,
-        )        
+        )
         # Record a video of the table camera during playback only if there is a single environment
-        save_frame_idx = range(5, 10000000, self.cfg.reward_frame_step) # initial frames are not well rendered, start at 5
+        save_frame_idx = range(5, 10000000, self.cfg.reward_frame_step)  # initial frames are not well rendered, start at 5
 
         if self.num_envs == 1:
             # save the table_camera image to disk for debugging
             image = self.scene["table_camera"].data.output['rgb']
             image = image.squeeze(0)
-            #image = image[:, :, :3]
+            # image = image[:, :, :3]
             image_np = image.cpu().numpy().astype(np.uint8)
             self.video_frames_array.append(image_np)
             if self.common_step_counter in save_frame_idx:
                 # video index for saving
-                vid_idx = int(self.common_step_counter/240)
+                vid_idx = int(self.common_step_counter / 240)
                 # only save the video if the video index is greater than 0
                 if vid_idx > 0:
-                    video_save_path=f'/home/levi/data/dev_videos/franka_cabinet_video_chpnt_{self.chkpnt_step_cnt}_timesteps_{vid_idx}.mp4'
+                    video_save_path = f'/home/levi/data/dev_videos/franka_cabinet_video_chpnt_{self.chkpnt_step_cnt}_timesteps_{vid_idx}.mp4'
                     with imageio.get_writer(video_save_path, fps=30, codec='libx264', quality=10) as writer:
                         for frame in self.video_frames_array:
                             writer.append_data(frame)
@@ -438,20 +445,18 @@ class FrankaCabinetEnv(DirectRLEnv):
                 # save the table_camera image to disk for debugging
                 image = self.scene["table_camera"].data.output['rgb']
                 image = image.squeeze(0)
-                #image = image[:, :, :3]
+                # image = image[:, :, :3]
                 image_np = image.cpu().numpy().astype(np.uint8)
                 # store as PNG image
-                image_png = [Image.fromarray(image_np[i,...]) for i in range(self.num_envs)]
+                image_png = [Image.fromarray(image_np[i, ...]) for i in range(self.num_envs)]
                 # convert to base64 string and replace the image in the array with the b64 representation
                 img_str = []
-                for n, img in enumerate(image_png):         
+                for n, img in enumerate(image_png):
                     buffered = BytesIO()
                     img.save(buffered, format="PNG")
-                    #img.save('/home/levi/data/dev_images/franka_cabinet_image_'+str(n)+'_timestep_'+str(self.common_step_counter)+'.png', format="PNG")
+                    # img.save('/home/levi/projects/IsaacLab/source/vlmrew/dev_images/franka_cabinet_image_2_'+str(n)+'_timestep_'+str(self.common_step_counter)+'.png', format="PNG")
                     img_str.append(base64.b64encode(buffered.getvalue()).decode("utf-8"))
                 self.vlm_image_frames_array.append(img_str)
-        
-
 
         return {"policy": torch.clamp(obs, -5.0, 5.0)}
 
@@ -585,26 +590,26 @@ class FrankaCabinetEnv(DirectRLEnv):
         rewards = torch.where(cabinet_dof_pos[:, 3] > 0.39, rewards + (2.0 * around_handle_reward), rewards)
 
         return rewards
-    
+
     def _compute_vlm_rewards(self):
-        
+
         save_frame_idx = range(5, 10000000, self.cfg.reward_frame_step)
 
         # The counter gets incremented after the physics step so we need to subtract 1 to get the correct frame index
-        if self.common_step_counter-1 in save_frame_idx and len(self.vlm_image_frames_array) > 1:
-            messages=[
+        if self.common_step_counter - 1 in save_frame_idx and len(self.vlm_image_frames_array) > 1:
+            messages = [
                 {
-                "role": "system",
-                "content": """You are an image assessment tool that intreprets images and provides a real valued score indicating the degree that a robot has completed a specified task between 0 and 10 where 0 is equivalent to not started and 10 is completed. 
+                    "role": "system",
+                    "content": """You are an image assessment tool that intreprets images and provides a real valued score indicating the degree that a robot has completed a specified task between 0 and 10 where 0 is equivalent to not started and 10 is completed. 
                 The output will be in JSON format as an array of objects with a single key 'score' and a value between 0 and 10.""",
                 },
                 {
-                "role": "user",
-                "content": [
-                    {
-                    "type": "text",
-                    "text": "A robot arm is given a task to open the top drawer of a white cabinet. Provide scores for each of the following images considering the first image as a reference image with score 0. Include the reference image score along with the other images.",
-                    },          
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "A robot arm is given a task to open the top drawer of a white cabinet. Provide scores for each of the following images considering the first image as a reference image with score 0. Include the reference image score along with the other images.",
+                        },
                     ],
                 },
             ]
@@ -612,42 +617,49 @@ class FrankaCabinetEnv(DirectRLEnv):
             if len(self.vlm_image_frames_array) > 1:
                 image_array = [
                     {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/jpeg;base64,{self.vlm_image_frames_array[0][0]}",
-                        "detail": "auto",
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{self.vlm_image_frames_array[0][0]}",
+                            "detail": "auto",
                         },
-                    }                
+                    }
                 ]
 
                 messages[1]['content'].extend(image_array)
-            
+
             # Always grab the last stack of images
             image_array = [
                 {
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:image/jpeg;base64,{image_b64}",
-                    "detail": "auto",
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{image_b64}",
+                        "detail": "auto",
                     },
                 }
-            for image_b64 in self.vlm_image_frames_array[-1]
+                for image_b64 in self.vlm_image_frames_array[-1]
             ]
 
             messages[1]['content'].extend(image_array)
 
             # construct the gpt message
             response = self.gpt_client.chat.completions.create(
-                model="gpt-4o",
+                model="gpt-4o-2024-08-06",
                 messages=messages,
-                response_format={"type": "json_object"},  # Provide the correct response format
-                max_tokens=300,
-                )
+                response_format={
+                    'type': 'json_schema',
+                    'json_schema':
+                        {
+                            "name": "whocares",
+                            "schema": GPT_Rewards.model_json_schema()
+                        }
+                }
+            )
             try:
                 reward_scores = response.choices[0].message.content
                 reward_array = json.loads(reward_scores)["scores"]
                 score_array = [score["score"] for score in reward_array]
-                #get the last value of the array to use for the reward until the next evaluation
+                print(f"Reward scores: {score_array}")
+                # get the last value of the array to use for the reward until the next evaluation
                 self.vlm_reward_buf = score_array[-self.num_envs:]
                 # convert the reward to a tensor
                 self.vlm_reward_buf = torch.tensor(self.vlm_reward_buf)
@@ -658,7 +670,7 @@ class FrankaCabinetEnv(DirectRLEnv):
                     self.vlm_reward_buf = torch.zeros(self.num_envs, device=self.device)
             except:
                 self.vlm_reward_buf = torch.zeros(self.num_envs, device=self.device)
-                print("Error in response from GPT-4o")
+                print("Error in response from GPT")
         return self.vlm_reward_buf
 
     def _compute_grasp_transforms(
