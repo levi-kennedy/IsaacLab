@@ -136,13 +136,13 @@ def main():
             # env stepping
             obs, reward, done, info = env.step(actions)
             rewards.append(reward[0])
-            if step_cnt == 1100:
+            if step_cnt == 1200:
                 break
     # close the simulator
     #     print(f"Total rewards: {sum(rewards)}")
     env.close()
     # save the rewards array as a pickle file
-    with open(f"/home/levi/projects/IsaacLab/source/vlmrew/franka_cabinet/logs/rewards.pkl", "wb") as f:
+    with open(f"/home/levi/projects/IsaacLab/source/vlmrew/franka_cabinet/logs/p10_rewards.pkl", "wb") as f:
         dump_pickle(rewards, f)
 
 

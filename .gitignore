@@ -57,3 +57,6 @@ _build
 **/runs/*
 **/logs/*
 **/recordings/*
+
+# Data files
+source/vlmrew/dev_images

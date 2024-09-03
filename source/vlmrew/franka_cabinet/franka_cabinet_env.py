@@ -172,8 +172,92 @@ class FrankaCabinetEnvCfg(DirectRLEnvCfg):
     )
 
     # add camera
+    # p1
+    # theta = np.pi / 2
+    # phi = 0
+    # R = 2.5
+    # w_rot = -0.70493
+    # x_rot = -0.05548
+    # y_rot = 0.05548
+    # z_rot = 0.70493
+    # p2
+    # theta = np.pi / 2
+    # phi = np.pi / 6
+    # R = 2.5
+    # w_rot = -0.03215
+    # x_rot = -0.10854
+    # y_rot = 0.28219
+    # z_rot = 0.95266
+    # p3
+    # theta = np.pi / 2
+    # phi = 2 * np.pi / 6
+    # R = 2.5
+    # w_rot = -0.0566
+    # x_rot = -0.09804
+    # y_rot = 0.49679
+    # z_rot = 0.86046
+    # p4
+    # theta = np.pi / 2
+    # phi = 3 * np.pi / 6
+    # R = 2.5
+    # w_rot = -0.08005
+    # x_rot = -0.08005
+    # y_rot = 0.70256
+    # z_rot = 0.70256
+    # p5
+    # theta = 4 * np.pi / 6
+    # phi = np.pi / 6
+    # R = 2.5
+    # w_rot = -0.43676
+    # x_rot = -0.12003
+    # y_rot = 0.26818
+    # z_rot = 0.85024
+    # p6
+    # theta = 4 * np.pi / 6
+    # phi = 2 * np.pi / 6
+    # R = 2.5
+    # w_rot = 0.34117
+    # x_rot = 0.17615
+    # y_rot = -0.47236
+    # z_rot = -0.79338
+    # p7
+    # theta = 4 * np.pi / 6
+    # phi = 3 * np.pi / 6
+    # R = 2.5
+    # w_rot = 0.25479
+    # x_rot = 0.25212
+    # y_rot = -0.65074
+    # z_rot = -0.66936
+    # p8
+    # theta = 5 * np.pi / 6
+    # phi = 1 * np.pi / 6
+    # R = 2.5
+    # w_rot = 0.62204
+    # x_rot = 0.12905
+    # y_rot = -0.26337
+    # z_rot = -0.72598
+    # p9
+    # theta = 5 * np.pi / 6
+    # phi = 2 * np.pi / 6
+    # R = 2.5
+    # w_rot = 0.49757
+    # x_rot = 0.26737
+    # y_rot = -0.43675
+    # z_rot = -0.70014
+    # p10
+    theta = 5 * np.pi / 6
+    phi = 3 * np.pi / 6
+    R = 2.5
+    w_rot = 0.40582
+    x_rot = 0.37804
+    y_rot = -0.56552
+    z_rot = -0.61040
+
+    x_pos = R * np.sin(phi) * np.cos(theta)
+    y_pos = R * np.sin(phi) * np.sin(theta)
+    z_pos = R * np.cos(phi) + 0.5  # add offset for height of the hemisphere plane above ground
     table_camera = CameraCfg(
-        prim_path="/World/envs/env_.*/table_camera",
+        prim_path="/World/envs/env_.*/Robot/table_camera",
         update_period=0.0,
         height=512,
         width=512,
@@ -181,7 +265,8 @@ class FrankaCabinetEnvCfg(DirectRLEnvCfg):
         spawn=sim_utils.PinholeCameraCfg(
             focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 1.0e5)
         ),
-        offset=CameraCfg.OffsetCfg(pos=(1.2, -0.7, 1.3), rot=(0.8, 0.4, 0.18, 0.5), convention="opengl"),
+        offset=CameraCfg.OffsetCfg(pos=(x_pos, y_pos, z_pos), rot=(w_rot, x_rot, y_rot, z_rot), convention="opengl"),
+
     )
 
     action_scale = 7.5
@@ -348,34 +433,34 @@ class FrankaCabinetEnv(DirectRLEnv):
 
     def _get_rewards(self) -> torch.Tensor:
         # Refresh the intermediate values after the physics steps
-        self._compute_intermediate_values()
-        robot_left_finger_pos = self._robot.data.body_pos_w[:, self.left_finger_link_idx]
-        robot_right_finger_pos = self._robot.data.body_pos_w[:, self.right_finger_link_idx]
+        # self._compute_intermediate_values()
+        # robot_left_finger_pos = self._robot.data.body_pos_w[:, self.left_finger_link_idx]
+        # robot_right_finger_pos = self._robot.data.body_pos_w[:, self.right_finger_link_idx]
 
-        return self._compute_rewards(
-            self.actions,
-            self._cabinet.data.joint_pos,
-            self.robot_grasp_pos,
-            self.drawer_grasp_pos,
-            self.robot_grasp_rot,
-            self.drawer_grasp_rot,
-            robot_left_finger_pos,
-            robot_right_finger_pos,
-            self.gripper_forward_axis,
-            self.drawer_inward_axis,
-            self.gripper_up_axis,
-            self.drawer_up_axis,
-            self.num_envs,
-            self.cfg.dist_reward_scale,
-            self.cfg.rot_reward_scale,
-            self.cfg.around_handle_reward_scale,
-            self.cfg.open_reward_scale,
-            self.cfg.finger_dist_reward_scale,
-            self.cfg.action_penalty_scale,
-            self._robot.data.joint_pos,
-            self.cfg.finger_close_reward_scale,
-        )
-        # return self._compute_vlm_rewards()
+        # return self._compute_rewards(
+        #     self.actions,
+        #     self._cabinet.data.joint_pos,
+        #     self.robot_grasp_pos,
+        #     self.drawer_grasp_pos,
+        #     self.robot_grasp_rot,
+        #     self.drawer_grasp_rot,
+        #     robot_left_finger_pos,
+        #     robot_right_finger_pos,
+        #     self.gripper_forward_axis,
+        #     self.drawer_inward_axis,
+        #     self.gripper_up_axis,
+        #     self.drawer_up_axis,
+        #     self.num_envs,
+        #     self.cfg.dist_reward_scale,
+        #     self.cfg.rot_reward_scale,
+        #     self.cfg.around_handle_reward_scale,
+        #     self.cfg.open_reward_scale,
+        #     self.cfg.finger_dist_reward_scale,
+        #     self.cfg.action_penalty_scale,
+        #     self._robot.data.joint_pos,
+        #     self.cfg.finger_close_reward_scale,
+        # )
+        return self._compute_vlm_rewards()
 
     def _reset_idx(self, env_ids: torch.Tensor | None):
         super()._reset_idx(env_ids)
@@ -418,7 +503,7 @@ class FrankaCabinetEnv(DirectRLEnv):
             dim=-1,
         )
         # Record a video of the table camera during playback only if there is a single environment
-        save_frame_idx = range(5, 10000000, self.cfg.reward_frame_step)  # initial frames are not well rendered, start at 5
+        save_frame_idx = range(1, 10000000, self.cfg.reward_frame_step)  # initial frames are not well rendered, start at 5
 
         if self.num_envs == 1:
             # save the table_camera image to disk for debugging
@@ -427,16 +512,26 @@ class FrankaCabinetEnv(DirectRLEnv):
             # image = image[:, :, :3]
             image_np = image.cpu().numpy().astype(np.uint8)
             self.video_frames_array.append(image_np)
-            if self.common_step_counter in save_frame_idx:
-                # video index for saving
-                vid_idx = int(self.common_step_counter / 240)
-                # only save the video if the video index is greater than 0
-                if vid_idx > 0:
-                    video_save_path = f'/home/levi/data/dev_videos/franka_cabinet_video_chpnt_{self.chkpnt_step_cnt}_timesteps_{vid_idx}.mp4'
-                    with imageio.get_writer(video_save_path, fps=30, codec='libx264', quality=10) as writer:
-                        for frame in self.video_frames_array:
-                            writer.append_data(frame)
-                    self.video_frames_array = []
+            if self.common_step_counter in save_frame_idx and 0:
+                # save the table_camera image to disk for debugging
+                image = self.scene["table_camera"].data.output['rgb']
+                image = image.squeeze(0)
+                # image = image[:, :, :3]
+                image_np = image.cpu().numpy().astype(np.uint8)
+                # store as PNG image
+                image_png = Image.fromarray(image_np)
+                buffered = BytesIO()
+                image_png.save(buffered, format="PNG")
+                image_png.save("/home/levi/projects/IsaacLab/source/vlmrew/dev_images/p10/franka_cabinet_image" + "_timestep_" + f"{self.common_step_counter:04}" + ".png", format="PNG")
+                # # video index for saving
+                # vid_idx = int(self.common_step_counter / 240)
+                # # only save the video if the video index is greater than 0
+                # if vid_idx > 0:
+                #     video_save_path = f'/home/levi/data/dev_videos/franka_cabinet_video_chpnt_{self.chkpnt_step_cnt}_timesteps_{vid_idx}.mp4'
+                #     with imageio.get_writer(video_save_path, fps=30, codec='libx264', quality=10) as writer:
+                #         for frame in self.video_frames_array:
+                #             writer.append_data(frame)
+                #     self.video_frames_array = []
         else:
             # get num_reward_frames number of frame indices to save
 
