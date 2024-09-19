@@ -221,13 +221,13 @@ class FrankaCabinetEnvCfg(DirectRLEnvCfg):
     # y_rot = -0.47236
     # z_rot = -0.79338
     # p7
-    # theta = 4 * np.pi / 6
-    # phi = 3 * np.pi / 6
-    # R = 2.5
-    # w_rot = 0.25479
-    # x_rot = 0.25212
-    # y_rot = -0.65074
-    # z_rot = -0.66936
+    theta = 4 * np.pi / 6
+    phi = 3 * np.pi / 6
+    R = 2.5
+    w_rot = 0.25479
+    x_rot = 0.25212
+    y_rot = -0.65074
+    z_rot = -0.66936
     # p8
     # theta = 5 * np.pi / 6
     # phi = 1 * np.pi / 6
@@ -245,13 +245,37 @@ class FrankaCabinetEnvCfg(DirectRLEnvCfg):
     # y_rot = -0.43675
     # z_rot = -0.70014
     # p10
-    theta = 5 * np.pi / 6
-    phi = 3 * np.pi / 6
-    R = 2.5
-    w_rot = 0.40582
-    x_rot = 0.37804
-    y_rot = -0.56552
-    z_rot = -0.61040
+    # theta = 5 * np.pi / 6
+    # phi = 3 * np.pi / 6
+    # R = 2.5
+    # w_rot = 0.40582
+    # x_rot = 0.37804
+    # y_rot = -0.56552
+    # z_rot = -0.61040
+    # p11
+    # theta = 6 * np.pi / 6
+    # phi = 1 * np.pi / 6
+    # R = 2.5
+    # w_rot = 0.67034
+    # x_rot = 0.24003
+    # y_rot = -0.20884
+    # z_rot = -0.67039
+    # p12
+    # theta = 6 * np.pi / 6
+    # phi = 2 * np.pi / 6
+    # R = 2.5
+    # w_rot = 0.61009
+    # x_rot = 0.35131
+    # y_rot = -0.35583
+    # z_rot = -0.61461
+    # p13
+    # theta = 6 * np.pi / 6
+    # phi = 3 * np.pi / 6
+    # R = 2.5
+    # w_rot = 0.5
+    # x_rot = 0.5
+    # y_rot = -0.5
+    # z_rot = -0.5
 
     x_pos = R * np.sin(phi) * np.cos(theta)
     y_pos = R * np.sin(phi) * np.sin(theta)
@@ -282,7 +306,7 @@ class FrankaCabinetEnvCfg(DirectRLEnvCfg):
     finger_close_reward_scale = 10.0
 
     # vlm reward parameters
-    reward_frame_step = 30
+    reward_frame_step = 1
 
 
 class FrankaCabinetEnv(DirectRLEnv):
@@ -433,33 +457,33 @@ class FrankaCabinetEnv(DirectRLEnv):
 
     def _get_rewards(self) -> torch.Tensor:
         # Refresh the intermediate values after the physics steps
-        # self._compute_intermediate_values()
-        # robot_left_finger_pos = self._robot.data.body_pos_w[:, self.left_finger_link_idx]
-        # robot_right_finger_pos = self._robot.data.body_pos_w[:, self.right_finger_link_idx]
+        self._compute_intermediate_values()
+        robot_left_finger_pos = self._robot.data.body_pos_w[:, self.left_finger_link_idx]
+        robot_right_finger_pos = self._robot.data.body_pos_w[:, self.right_finger_link_idx]
 
-        # return self._compute_rewards(
-        #     self.actions,
-        #     self._cabinet.data.joint_pos,
-        #     self.robot_grasp_pos,
-        #     self.drawer_grasp_pos,
-        #     self.robot_grasp_rot,
-        #     self.drawer_grasp_rot,
-        #     robot_left_finger_pos,
-        #     robot_right_finger_pos,
-        #     self.gripper_forward_axis,
-        #     self.drawer_inward_axis,
-        #     self.gripper_up_axis,
-        #     self.drawer_up_axis,
-        #     self.num_envs,
-        #     self.cfg.dist_reward_scale,
-        #     self.cfg.rot_reward_scale,
-        #     self.cfg.around_handle_reward_scale,
-        #     self.cfg.open_reward_scale,
-        #     self.cfg.finger_dist_reward_scale,
-        #     self.cfg.action_penalty_scale,
-        #     self._robot.data.joint_pos,
-        #     self.cfg.finger_close_reward_scale,
-        # )
+        return self._compute_rewards(
+            self.actions,
+            self._cabinet.data.joint_pos,
+            self.robot_grasp_pos,
+            self.drawer_grasp_pos,
+            self.robot_grasp_rot,
+            self.drawer_grasp_rot,
+            robot_left_finger_pos,
+            robot_right_finger_pos,
+            self.gripper_forward_axis,
+            self.drawer_inward_axis,
+            self.gripper_up_axis,
+            self.drawer_up_axis,
+            self.num_envs,
+            self.cfg.dist_reward_scale,
+            self.cfg.rot_reward_scale,
+            self.cfg.around_handle_reward_scale,
+            self.cfg.open_reward_scale,
+            self.cfg.finger_dist_reward_scale,
+            self.cfg.action_penalty_scale,
+            self._robot.data.joint_pos,
+            self.cfg.finger_close_reward_scale,
+        )
         return self._compute_vlm_rewards()
 
     def _reset_idx(self, env_ids: torch.Tensor | None):
@@ -512,7 +536,7 @@ class FrankaCabinetEnv(DirectRLEnv):
             # image = image[:, :, :3]
             image_np = image.cpu().numpy().astype(np.uint8)
             self.video_frames_array.append(image_np)
-            if self.common_step_counter in save_frame_idx and 0:
+            if self.common_step_counter in save_frame_idx and 1:
                 # save the table_camera image to disk for debugging
                 image = self.scene["table_camera"].data.output['rgb']
                 image = image.squeeze(0)
@@ -522,7 +546,8 @@ class FrankaCabinetEnv(DirectRLEnv):
                 image_png = Image.fromarray(image_np)
                 buffered = BytesIO()
                 image_png.save(buffered, format="PNG")
-                image_png.save("/home/levi/projects/IsaacLab/source/vlmrew/dev_images/p10/franka_cabinet_image" + "_timestep_" + f"{self.common_step_counter:04}" + ".png", format="PNG")
+                aspect_point = "fewshot"
+                image_png.save(f"/home/levi/projects/IsaacLab/source/vlmrew/dev_images/{aspect_point}/franka_cabinet_image_timestep_{self.common_step_counter:04}.png", format="PNG")
                 # # video index for saving
                 # vid_idx = int(self.common_step_counter / 240)
                 # # only save the video if the video index is greater than 0
