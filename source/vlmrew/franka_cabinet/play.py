@@ -142,8 +142,8 @@ def main():
     #     print(f"Total rewards: {sum(rewards)}")
     env.close()
     # save the rewards array as a pickle file
-    with open(f"/home/levi/projects/IsaacLab/source/vlmrew/franka_cabinet/logs/fewshot_rewards.pkl", "wb") as f:
-        dump_pickle(rewards, f)
+    # with open(f"/home/levi/projects/IsaacLab/source/vlmrew/franka_cabinet/logs/fewshot_rewards.pkl", "wb") as f:
+    #     dump_pickle(rewards, f)
 
 
 if __name__ == "__main__":
