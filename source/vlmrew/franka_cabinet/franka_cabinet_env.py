@@ -221,13 +221,13 @@ class FrankaCabinetEnvCfg(DirectRLEnvCfg):
     # y_rot = -0.47236
     # z_rot = -0.79338
     # p7
-    theta = 4 * np.pi / 6
-    phi = 3 * np.pi / 6
-    R = 2.5
-    w_rot = 0.25479
-    x_rot = 0.25212
-    y_rot = -0.65074
-    z_rot = -0.66936
+    # theta = 4 * np.pi / 6
+    # phi = 3 * np.pi / 6
+    # R = 2.5
+    # w_rot = 0.25479
+    # x_rot = 0.25212
+    # y_rot = -0.65074
+    # z_rot = -0.66936
     # p8
     # theta = 5 * np.pi / 6
     # phi = 1 * np.pi / 6
@@ -269,13 +269,13 @@ class FrankaCabinetEnvCfg(DirectRLEnvCfg):
     # y_rot = -0.35583
     # z_rot = -0.61461
     # p13
-    # theta = 6 * np.pi / 6
-    # phi = 3 * np.pi / 6
-    # R = 2.5
-    # w_rot = 0.5
-    # x_rot = 0.5
-    # y_rot = -0.5
-    # z_rot = -0.5
+    theta = 6 * np.pi / 6
+    phi = 3 * np.pi / 6
+    R = 2.5
+    w_rot = 0.5
+    x_rot = 0.5
+    y_rot = -0.5
+    z_rot = -0.5
 
     x_pos = R * np.sin(phi) * np.cos(theta)
     y_pos = R * np.sin(phi) * np.sin(theta)
@@ -536,7 +536,7 @@ class FrankaCabinetEnv(DirectRLEnv):
             # image = image[:, :, :3]
             image_np = image.cpu().numpy().astype(np.uint8)
             self.video_frames_array.append(image_np)
-            if self.common_step_counter in save_frame_idx and 1:
+            if self.common_step_counter in save_frame_idx and 0:
                 # save the table_camera image to disk for debugging
                 image = self.scene["table_camera"].data.output['rgb']
                 image = image.squeeze(0)
@@ -546,7 +546,7 @@ class FrankaCabinetEnv(DirectRLEnv):
                 image_png = Image.fromarray(image_np)
                 buffered = BytesIO()
                 image_png.save(buffered, format="PNG")
-                aspect_point = "fewshot"
+                aspect_point = "fewshot_p13"
                 image_png.save(f"/home/levi/projects/IsaacLab/source/vlmrew/dev_images/{aspect_point}/franka_cabinet_image_timestep_{self.common_step_counter:04}.png", format="PNG")
                 # # video index for saving
                 # vid_idx = int(self.common_step_counter / 240)
